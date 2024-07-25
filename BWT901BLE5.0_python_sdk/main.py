@@ -32,7 +32,7 @@ def print_collecteData(DeviceModel):
 
 def saveData(DeviceModel):
     # Salvar dados no formato CSV
-    # Timestaps tem que ser feitos de forma diferente para ir para o tratamento dos dados, no caso fica o ms
+    # Timestaps tem que ser feitos de forma diferente para ir para o tratamento dos dados, deve estar em segundos! ex.: 1.0765s
     fieldnames = ['hora', 'gFx', 'gFy', 'gFz',
                   'AsX', 'AsY', 'AsZ', 'AngX', 'AngY', 'AngZ']
     with open("device_data.csv", "a", newline='') as file:
