@@ -1,0 +1,13 @@
+-> Por ser um dispositivo simples e sem fio os timestamps são gerados por código, o acelerometro deve ser calibrado pelo programma disponivel no site do fabricante. E utilizado um script em python para a leitura, armazenamento e processamento dos dados, foi tomado em conta a aceleração em relação ao eixo Z, pressuponto que o acelerometro ficará com a face que tem o led constantemente para cima durante o experimento.
+-> Os acelerômetros aplicam uma aceleração gravitacional de 1G na direção do solo em estado estacionário, mas a aceleração torna-se “0” durante a queda livre.
+-> Tomando isso como pressuposto para converter a unidade que o acelerometro retorna em g(Aceleração da gravidade), foi feito um calculo para converter a unidade de g para m/s², onde 1g = 9.80665 m/s², então a aceleração é dada por a = g * 9.80665 - 9.80665.
+
+Fluxograma:
+    - Configuração do acelerometro para 50Hz no app proprietário do fabricante
+    - Calibração do acelerometro no app proprietário do fabricante
+    - Conexão do acelerometro ao computador
+    - Coleta de dados pelo script em python (Colunas importantes: Timestamp, Aceleração no eixo Z)
+    - Processamento dos dados:
+        - Interpolação dos dados com spline cúbico de 150Hz
+        - Estimativa de altura com threshold de -0.5g (Com base no artigo)
+        - Cálculo da altura com base no metodo ft
