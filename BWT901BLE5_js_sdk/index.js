@@ -79,6 +79,12 @@ recordBtn.addEventListener("click", () => {
 });
 
 viewDataBtn.addEventListener("click", () => {
+	if (recording) {
+		recording = false;
+		recordBtn.textContent = "Record Data";
+		console.log("Parando gravação...");
+	}
+
 	console.log("Visualizando dados gravados: ", recordedData);
 	const dataBlob = new Blob([JSON.stringify(recordedData, null, 2)], {
 		type: "application/json",
