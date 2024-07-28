@@ -2,14 +2,18 @@ import DeviceModel from "./device_model.js";
 
 const searchButton = document.getElementById("search");
 const deviceList = document.getElementById("deviceList");
-const sendButton = document.getElementById("send");
-const readButton = document.getElementById("read");
+const recordBtn = document.getElementById("recordBtn");
+const viewDataBtn = document.getElementById("viewDataBtn");
+const clearDataBtn = document.getElementById("clsDataBtn");
 
 let devices = [];
 let connectedDeviceModel = null;
+let recording = false;
+let recordedData = [];
+let startTime = 0;
 
 async function scan() {
-	console.log("Pesquisando dispositivos Bluetooth......");
+	console.log("Pesquisando dispositivos Bluetooth...");
 	try {
 		const options = {
 			acceptAllDevices: true,
@@ -40,6 +44,7 @@ async function connectDevice(device) {
 		const deviceModel = new DeviceModel(device.name, device.id, saveData);
 		await deviceModel.openDevice();
 		connectedDeviceModel = deviceModel;
+		console.log(`Conectado ao dispositivo: ${device.name}`);
 	} catch (error) {
 		console.log("Erro ao conectar ao dispositivo");
 		console.log(error);
@@ -47,57 +52,43 @@ async function connectDevice(device) {
 }
 
 function saveData(deviceModel) {
-	const fieldnames = [
-		"hora",
-		"AccX",
-		"AccY",
-		"AccZ",
-		"AsX",
-		"AsY",
-		"AsZ",
-		"AngX",
-		"AngY",
-		"AngZ",
-	];
-	const data = deviceModel.deviceData;
-	data["hora"] = new Date().toISOString();
-
-	const csvData = fieldnames.map((field) => data[field]).join(",");
-	const csvHeader = fieldnames.join(",");
-
-	let csvContent = localStorage.getItem("device_data_csv");
-
-	if (!csvContent) {
-		csvContent = `${csvHeader}\n${csvData}`;
+	if (recording) {
+		const currentTime = (performance.now() - startTime) / 1000;
+		const data = {
+			timestamp: currentTime.toFixed(4),
+			data: structuredClone(deviceModel.deviceData),
+		};
+		recordedData.push(data);
+		console.log("Dados gravados: ", data);
 	} else {
-		csvContent += `\n${csvData}`;
+		console.log("Dados recebidos (não gravados): ", deviceModel.deviceData);
 	}
-
-	localStorage.setItem("device_data_csv", csvContent);
-	console.log("Data saved:", csvData);
 }
 
-sendButton.addEventListener("click", () => {
-	if (connectedDeviceModel) {
-		const data = prompt(
-			"Digite os dados a serem enviados (ex.: 0x01,0x02,0x03):"
-		)
-			.split(",")
-			.map(Number);
-		connectedDeviceModel.sendData(data);
+recordBtn.addEventListener("click", () => {
+	recording = !recording;
+	if (recording) {
+		recordBtn.textContent = "Stop Recording";
+		recordedData = []; // Reseta o array para gravar novos dados
+		startTime = performance.now();
+		console.log("Iniciando gravação...");
 	} else {
-		console.log("Nenhum dispositivo conectado");
+		recordBtn.textContent = "Record Data";
+		console.log("Parando gravação...");
 	}
 });
 
-readButton.addEventListener("click", () => {
-	if (connectedDeviceModel) {
-		const regAddr = parseInt(
-			prompt("Digite o endereço do registro para ler (ex.: 0x01):"),
-			16
-		);
-		connectedDeviceModel.readReg(regAddr);
-	} else {
-		console.log("Nenhum dispositivo conectado");
-	}
+viewDataBtn.addEventListener("click", () => {
+	console.log("Visualizando dados gravados: ", recordedData);
+	const dataBlob = new Blob([JSON.stringify(recordedData, null, 2)], {
+		type: "application/json",
+	});
+	const url = URL.createObjectURL(dataBlob);
+	window.open(url);
+});
+
+clearDataBtn.addEventListener("click", () => {
+	recordedData = [];
+	alert("Dados apagados");
+	console.log("Dados apagados");
 });

@@ -22,7 +22,7 @@ class DeviceModel {
 
 	async openDevice() {
 		try {
-			console.log("Opening device...");
+			console.log("Iniciando o dispositivo...");
 			const device = await navigator.bluetooth.requestDevice({
 				filters: [{ services: ["0000ffe5-0000-1000-8000-00805f9a34fb"] }],
 			});
@@ -51,7 +51,7 @@ class DeviceModel {
 
 	closeDevice() {
 		this.isOpen = false;
-		console.log("The device is turned off");
+		console.log("O dispositivo está desligado");
 	}
 
 	onDataReceived(event) {
@@ -82,9 +82,9 @@ class DeviceModel {
 		let AngX = (this.getSignInt16((Bytes[13] << 8) | Bytes[12]) / 32768) * 180;
 		let AngY = (this.getSignInt16((Bytes[15] << 8) | Bytes[14]) / 32768) * 180;
 		let AngZ = (this.getSignInt16((Bytes[17] << 8) | Bytes[16]) / 32768) * 180;
-		this.set("AccX", Ax.toFixed(3));
-		this.set("AccY", Ay.toFixed(3));
-		this.set("AccZ", Az.toFixed(3));
+		this.set("gFx", Ax.toFixed(3));
+		this.set("gFy", Ay.toFixed(3));
+		this.set("gFz", Az.toFixed(3));
 		this.set("AsX", Gx.toFixed(3));
 		this.set("AsY", Gy.toFixed(3));
 		this.set("AsZ", Gz.toFixed(3));
