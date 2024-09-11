@@ -1,4 +1,5 @@
 import DeviceModel from "./device_model.js";
+import {add, sub, mul, div} from "./operations.js";
 
 const searchButton = document.getElementById("search");
 const deviceList = document.getElementById("deviceList");
@@ -53,9 +54,9 @@ async function connectDevice(device) {
 
 function saveData(deviceModel) {
 	if (recording) {
-		const currentTime = (performance.now() - startTime) / 1000;
+		const currentTime = div(sub(performance.now(), startTime), 1000);
 		const data = {
-			timestamp: currentTime.toFixed(4),
+			timestamp: currentTime,
 			data: structuredClone(deviceModel.deviceData),
 		};
 		recordedData.push(data);
