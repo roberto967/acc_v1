@@ -9,7 +9,6 @@ import matplotlib.pyplot as plt
 from scipy.signal import butter, filtfilt
 from scipy.fft import fft, fftfreq
 from scipy.interpolate import UnivariateSpline
-from sklearn.metrics import mean_squared_error
 
 def pb_ord_4_ctt_6(signal, fs, cutoff=6, order=4):
   nyquist = 0.5 * fs
@@ -30,7 +29,7 @@ def calculate_frequency(time):
     
     return frequency
 
-data = read_csv('./teste.csv', ";", False)
+data = read_csv('./teste.csv', ",")
 
 acc = data['gFz']
 time = data['time']
@@ -40,7 +39,7 @@ print("Frequência de amostragem: ", freq)
 
 acc = pb_ord_4_ctt_6(acc, freq)
 
-target_freq = 1000
+target_freq = 200
 spl = UnivariateSpline(time, acc, s = 0)
 time_spl =  np.linspace(time.min(), time.max(), target_freq)
 acc_spl = spl(time_spl)
@@ -61,3 +60,13 @@ di_result = di(time_spl, acc_spl, target_freq)
 
 print("TOV: ", tov_result)
 print("DI: ", di_result)
+
+# ft_data = {
+#     'time': time_spl,
+#     'acc': acc_spl
+# }
+
+# data = pd.DataFrame(ft_data)
+
+# ft_result = ft(data)
+# print("FT: ", ft_result["jump_height"])
