@@ -1,6 +1,6 @@
 import pandas as pd
 
-def read_csv(data_path, _sep=';', is_float=True):
+def read_csv(data_path, _sep=',', is_float=True):
   data = pd.read_csv(data_path, sep=_sep)
   
   print(data.__len__())

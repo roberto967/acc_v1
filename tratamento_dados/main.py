@@ -1,72 +1,133 @@
 from collect_data import read_csv
 import numpy as np
-import pandas as pd
-from scipy.interpolate import CubicSpline
-from tov import tov
-from di import di
-from ft import ft
 import matplotlib.pyplot as plt
 from scipy.signal import butter, filtfilt
+from scipy.interpolate import CubicSpline
+from ft import ft
+from tov import tov
 from scipy.fft import fft, fftfreq
-from scipy.interpolate import UnivariateSpline
+import pandas as pd
 
-def pb_ord_4_ctt_6(signal, fs, cutoff=6, order=4):
-  nyquist = 0.5 * fs
-  normalized_cutoff = cutoff / nyquist
-  b, a = butter(order, normalized_cutoff, btype='low', analog=False)
-  filtered_signal = filtfilt(b, a, signal)
-  return filtered_signal
-
-def calculate_frequency(time):
-    # Calcula as diferenças entre os tempos consecutivos para encontrar o período de amostragem
-    time_diffs = np.diff(time)
-    
-    # Calcula o período médio de amostragem
-    average_period = np.mean(time_diffs)
-    
-    # Calcula a frequência de amostragem como o inverso do período médio
-    frequency = 1 / average_period
-    
-    return frequency
-
+# Leitura dos dados do CSV
 data = read_csv('./teste.csv', ",")
 
-acc = data['gFz']
-time = data['time']
+# Dados de aceleração e tempo
+acc = data['gFz'].values
+time = data['time'].values
+n = len(acc)
 
-freq = calculate_frequency(time)
-print("Frequência de amostragem: ", freq)
+# Estimando a frequência de amostragem a partir dos dados de tempo
+dt_array = np.diff(time)
+dt = np.mean(dt_array)
+fs = 1 / dt
+print(f"Frequência de amostragem estimada do sensor: {fs:.2f} Hz")
 
-acc = pb_ord_4_ctt_6(acc, freq)
+# fft
+acc_fft = fft(acc)
+frequencies = fftfreq(n, dt)
 
-target_freq = 200
-spl = UnivariateSpline(time, acc, s = 0)
-time_spl =  np.linspace(time.min(), time.max(), target_freq)
-acc_spl = spl(time_spl)
+positive_frequencies = frequencies[:n // 2]
+positive_magnitudes = 2.0 / n * np.abs(acc_fft[:n // 2])
 
-plt.figure(figsize=(12, 6))
-plt.plot(time, acc, 'r-', label='Dados Originais')
-plt.plot(time_spl, acc_spl, 'b-', label='Spline Interpolada')
-plt.title('Antes')
-plt.xlabel('Tempo (s)')
-plt.ylabel('Aceleração (m/s²)')
+plt.figure(figsize=(8, 6))
+plt.bar(positive_frequencies, positive_magnitudes,
+        width=0.1, color='black')
+plt.plot(positive_frequencies, positive_magnitudes, 'go', markersize=3)
+plt.axvline(x=15, color='r', linestyle='--', label='fc = 15 Hz')
+plt.xlabel('Frequência (Hz)')
+plt.ylabel('Magnitude')
+plt.title('Espectro de Fourier do sinal de aceleração')
 plt.legend()
 plt.grid(True)
-plt.tight_layout()
 plt.show()
 
-tov_result = tov(time_spl, acc_spl, target_freq)
-di_result = di(time_spl, acc_spl, target_freq)
+# Butterworth passa-baixas
+fc = 15
+order = 4
+nyquist = 0.5 * fs
+normal_cutoff = fc / nyquist
 
-print("TOV: ", tov_result)
-print("DI: ", di_result)
+b, a = butter(order, normal_cutoff, btype='low', analog=False)
 
-# ft_data = {
-#     'time': time_spl,
-#     'acc': acc_spl
-# }
+acc_filtered = filtfilt(b, a, acc)
 
-# data = pd.DataFrame(ft_data)
+plt.figure(figsize=(10, 6))
 
-# ft_result = ft(data)
-# print("FT: ", ft_result["jump_height"])
+plt.plot(time, acc, label='Sinal original', alpha=0.6)
+
+plt.plot(time, acc_filtered, label='Sinal filtrado (fc = 15 Hz)', linewidth=2)
+
+plt.xlabel('Tempo (s)')
+plt.ylabel('Aceleração (g)')
+plt.title('Sinal original e sinal filtrado')
+plt.legend()
+plt.grid(True)
+plt.show()
+
+acc = acc_filtered
+
+# Passo 1: Agrupar os dados por intervalos de tempo (binar os dados)
+n_bins = n // 8
+t_min = time.min()
+t_max = time.max()
+bin_edges = np.linspace(t_min, t_max, n_bins + 1)
+
+# Atribuir cada ponto de dados a um bin
+bin_indices = np.digitize(time, bin_edges)
+
+# Inicializar arrays para armazenar os dados binados
+bin_centers = (bin_edges[:-1] + bin_edges[1:]) / 2
+acc_binned = np.zeros(n_bins)
+counts = np.zeros(n_bins)
+
+# Acumular os valores de aceleração em cada bin
+for i in range(n):
+    bin_idx = bin_indices[i] - 1  # Ajuste para indexação baseada em zero
+    if 0 <= bin_idx < n_bins:
+        acc_binned[bin_idx] += acc[i]
+        counts[bin_idx] += 1
+
+# Passo 2: Calcular a média da aceleração em cada bin
+with np.errstate(divide='ignore', invalid='ignore'):
+    acc_binned = np.divide(acc_binned, counts, out=np.zeros_like(
+        acc_binned), where=counts != 0)
+
+# Rm bins com contagem zero
+valid_bins = counts > 0
+bin_centers_valid = bin_centers[valid_bins]
+acc_binned_valid = acc_binned[valid_bins]
+
+print(f"Número de bins válidos: {len(bin_centers_valid)}")
+
+# Frequência de amostragem desejada
+fs_new = 200
+dt_new = 1 / fs_new
+
+uniform_time_new = np.arange(t_min, t_max, dt_new)
+
+print(f"Número de pontos depois da interpolação: {len(uniform_time_new)}")
+
+# Passo 3
+cs = CubicSpline(bin_centers_valid, acc_binned_valid)
+acc_interpolated_new = cs(uniform_time_new)
+
+# Plot
+plt.figure(figsize=(12, 6))
+plt.plot(time, acc, '-', label=f'Dados Originais filtrados ({fs:.2f} Hz)')
+plt.plot(bin_centers_valid, acc_binned_valid, 's', label='bins')
+plt.plot(uniform_time_new, acc_interpolated_new, 'r-',
+         label='Interpolação Cúbica (200 Hz)')
+plt.legend()
+plt.xlabel('Tempo')
+plt.ylabel('Aceleração')
+plt.title('Sinal de aceleração pós filtragem, interpolação e binagem')
+plt.grid(True)
+plt.show()
+
+
+# resultado ft
+print(f"Resultado do cálculo do salto vertical: {
+      ft(pd.DataFrame({'time': uniform_time_new, 'acc': acc_interpolated_new}))}")
+# tov
+print(f"Resultado do cálculo do tempo de voo: {
+      tov(uniform_time_new, acc_interpolated_new)}")
